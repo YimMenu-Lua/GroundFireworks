@@ -134,7 +134,7 @@ function fire_firework(firework)
 		if firework_debug then
 			log.debug("Firework: " .. firework.object .. " Does not exist so it will never be deleted!")
 		end
-		gui.show_error("Firework", "Error firework " .. firework.object .. " so it will never be deleted!")
+		gui.show_error("Firework", "Error firework " .. firework.object .. " not found so it will never be deleted!")
 		table.remove(fireworks, firework) -- This is bad this firework will never be deleted now.
 		return
 	end
