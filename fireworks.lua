@@ -1,3 +1,4 @@
+---@diagnostic disable: undefined-global, lowercase-global
 -- This script add fireworks like on old gen GTA Online.
 -- The UI is in the lua scripts tab.
 
@@ -165,7 +166,11 @@ function delete_firework(firework, delete)
 			ENTITY.SET_ENTITY_AS_NO_LONGER_NEEDED(firework.object)
 		end
 	end
-	table.remove(fireworks, k)
+	for k,v in ipairs(fireworks) do
+		if v.object == firework.object then
+			table.remove(fireworks, k)
+		end
+	end
 end
 
 
@@ -204,6 +209,7 @@ script.register_looped("update_fireworks", function(script)
 			end
 		end
 
+		-- Delete firework if placement is interrupted.
 		if PED.IS_PED_RAGDOLL(PLAYER.PLAYER_PED_ID())
 		or PED.IS_PED_RUNNING_RAGDOLL_TASK(PLAYER.PLAYER_PED_ID())
 		or PED.IS_PED_DEAD_OR_DYING(PLAYER.PLAYER_PED_ID(), false)
@@ -214,31 +220,31 @@ script.register_looped("update_fireworks", function(script)
 		end
 end)
 
-local lua_tab = gui.get_tab("GUI_TAB_LUA_SCRIPTS")
-local type_input
-local color_input_r
-local color_input_g
-local color_input_b
-lua_tab:add_separator()
-lua_tab:add_text("Fireworks\nSupported types are:\n0 - Fountain\n1 - Shotburst\n2 - Starburst\n3 - Trailburst")
-lua_tab:add_button("Place Firework", function()
-	current_firework.type = type_input:get_value()
-	current_firework.r = color_input_r:get_value()
-	current_firework.g = color_input_g:get_value()
-	current_firework.b = color_input_b:get_value()
-	
-	script.run_in_fiber(function()
-		if(load_fireworks()) then
-			place_firework_anim(current_firework.type)
-		end
-	end)
-end)
-type_input = lua_tab:add_input_int("Firework type")
-color_input_r = lua_tab:add_input_float("Color R")
-color_input_g = lua_tab:add_input_float("Color G")
-color_input_b = lua_tab:add_input_float("Color B")
+local lua_tab = gui.get_tab("GUI_TAB_WORLD"):add_tab("Fireworks")
+local color_input = { 0.0, 0.0, 0.0 }
 
 lua_tab:add_imgui(function()
+	local used = false
+	color_input, used = ImGui.ColorEdit3("Color", color_input)
+
+	if ImGui.RadioButton("Fountain", current_firework.type == 0) then current_firework.type = 0 end
+	if ImGui.RadioButton("Shotburst", current_firework.type == 1) then current_firework.type = 1 end
+	if ImGui.RadioButton("Starburst", current_firework.type == 2) then current_firework.type = 2 end
+	if ImGui.RadioButton("Trailburst", current_firework.type == 3) then current_firework.type = 3 end
+	
+	if ImGui.Button("Place Firework") then
+		current_firework.r = color_input[1]
+		current_firework.g = color_input[2]
+		current_firework.b = color_input[3]
+		script.run_in_fiber(function()
+			if(load_fireworks()) then
+				place_firework_anim(current_firework.type)
+			end
+		end)
+	end
+
+	ImGui.Separator()
+
 	ImGui.Text("Currently Spawned: " .. #fireworks)
 	if ImGui.Button("Fire All") then
 		for k,v in ipairs(fireworks) do -- For some reason i can't put the for loop inside the fiber pool or it won't fire all fireworks.
@@ -253,7 +259,10 @@ lua_tab:add_imgui(function()
 	end
 
 	for k,v in ipairs(fireworks) do
-		if ImGui.Button("Fire Firework - " .. k .. " (" .. get_firework_name_from_type(v.type) .. ")") then
+		local button_press = ImGui.Button("Fire Firework - " .. k .. " (" .. get_firework_name_from_type(v.type) .. ")")
+		ImGui.SameLine()
+		ImGui.ColorButton("Fire Firework - " .. k .. " (" .. get_firework_name_from_type(v.type) .. ")", {v.r, v.g, v.b, 1})
+		if button_press then
 			script.run_in_fiber(function()
 				fire_firework(v)
 			end)
